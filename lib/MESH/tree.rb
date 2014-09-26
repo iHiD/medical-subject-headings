@@ -36,6 +36,7 @@ module MESH
         heading.connect_to_forward_references
       end
 
+      word_hash
     end
 
     def add_heading_to_hashes(mh)
@@ -110,6 +111,7 @@ module MESH
 
       end
       @locales << locale
+      reset_word_hash
     end
 
     def load_wikipedia
@@ -201,28 +203,57 @@ module MESH
       end
     end
 
-    def match_in_text(text)
-      return [] if text.nil?
-      downcased = text.downcase
-      matches = []
+    def reset_word_hash
+      @word_hash = nil
+      word_hash
+    end
+
+    def word_hash
+      return @word_hash if @word_hash
+
+      @word_hash = {}
       @headings.each do |heading|
         next unless heading.useful
         @locales.each do |locale|
           heading.entries(locale).each do |entry|
-            if downcased.include? entry.downcase #This is a looser check than the regex but much, much faster
-              if /^[A-Z0-9]+$/ =~ entry
-                regex = /(^|\W)#{Regexp.quote(entry)}(\W|$)/
-              else
-                regex = /(^|\W)#{Regexp.quote(entry)}(\W|$)/i
-              end
-              text.to_enum(:scan, regex).map do |m,|
-                matches << {heading: heading, matched: entry, index: $`.size}
-              end
+            entry.downcase.split(" ").each do |word|
+              next if word.length < 3
+              word.gsub!(/\W/, '')
+              @word_hash[word] ||= []
+              @word_hash[word] << [heading, entry]
             end
           end
         end
       end
-      confirmed_matches = []
+      @word_hash.each do |_, a|
+        a.uniq!
+      end
+    end
+
+    def match_in_text(text)
+      return [] if text.nil?
+
+      tested_pairs = []
+      matches = []
+      downcased = text.downcase.gsub(/[^\w\s]/, '')
+      downcased.split(" ").each do |word|
+        next if word.length < 3
+        next unless word_hash[word]
+
+        word_hash[word].each do |heading, entry|
+          next unless downcased.include? entry.downcase
+          if /^[A-Z0-9]+$/ =~ entry
+            regex = /(^|\W)#{Regexp.quote(entry)}(\W|$)/
+          else
+            regex = /(^|\W)#{Regexp.quote(entry)}(\W|$)/i
+          end
+          text.to_enum(:scan, regex).map do |m,|
+            matches << {heading: heading, matched: entry, index: $`.size}
+          end
+        end
+      end
+
+      matches.uniq!
       matches.combination(2) do |l, r|
         if (r[:index] >= l[:index]) && (r[:index] + r[:matched].length <= l[:index] + l[:matched].length)
           #r is within l
@@ -233,9 +264,7 @@ module MESH
         end
       end
       matches.delete_if { |match| match[:delete] }
+      matches
     end
-
-
   end
-
 end

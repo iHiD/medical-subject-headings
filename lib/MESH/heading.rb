@@ -150,45 +150,41 @@ module MESH
 
       lines.each do |line|
         case
+        when matches = line.match(/^UI = (.*)/)
+          @unique_id = matches[1]
 
-          when matches = line.match(/^UI = (.*)/)
-            @unique_id = matches[1]
+        when matches = line.match(/^MN = (.*)/)
+          @tree_numbers << matches[1]
+          @roots << matches[1][0] unless @roots.include?(matches[1][0])
 
-          when matches = line.match(/^MN = (.*)/)
-            @tree_numbers << matches[1]
-            @roots << matches[1][0] unless @roots.include?(matches[1][0])
+        when matches = line.match(/^MS = (.*)/)
+          set_summary(matches[1])
 
-          when matches = line.match(/^MS = (.*)/)
-            set_summary(matches[1])
+        when matches = line.match(/^DC = (.*)/)
+          @descriptor_class = @@descriptor_classes[matches[1].to_i]
 
-          when matches = line.match(/^DC = (.*)/)
-            @descriptor_class = @@descriptor_classes[matches[1].to_i]
+        when matches = line.match(/^ST = (.*)/)
+          @semantic_types << MESH::SemanticTypes[matches[1]]
 
-          when matches = line.match(/^ST = (.*)/)
-            @semantic_types << MESH::SemanticTypes[matches[1]]
+        when matches = line.match(/^MH = (.*)/)
+          mh = matches[1]
+          set_original_heading(mh)
+          @entries[@default_locale] << mh unless @entries.include? mh
+          librarian_parts = mh.match(/(.*), (.*)/)
+          nln = librarian_parts.nil? ? mh : "#{librarian_parts[2]} #{librarian_parts[1]}"
+          set_natural_language_name(nln)
 
-          when matches = line.match(/^MH = (.*)/)
-            mh = matches[1]
-            set_original_heading(mh)
-            @entries[@default_locale] << mh unless @entries.include? mh
-            librarian_parts = mh.match(/(.*), (.*)/)
-            nln = librarian_parts.nil? ? mh : "#{librarian_parts[2]} #{librarian_parts[1]}"
-            set_natural_language_name(nln)
+        when matches = line.match(/^(?:PRINT )?ENTRY = (.*)/)
+          entry = matches[1]
+          term = entry.match(/([^|]+)/)
+          @entries[@default_locale] << term[1] unless @entries.include? term[1]
+          @structured_entries << MESH::Entry.new(self, entry)
 
-          when matches = line.match(/^(?:PRINT )?ENTRY = (.*)/)
-            entry = matches[1]
-            term = entry.match(/([^|]+)/)
-            @entries[@default_locale] << term[1] unless @entries.include? term[1]
-            @structured_entries << MESH::Entry.new(self, entry)
-
-          when matches = line.match(/^FX = (.*)/)
-            @forward_reference_terms << matches[1]
-
+        when matches = line.match(/^FX = (.*)/)
+          @forward_reference_terms << matches[1]
         end
-
       end
       @entries[@default_locale].sort!
-
     end
   end
 end

@@ -16,6 +16,30 @@ module MESH
       end
     end
 
+    def test_benchmark
+      example_resource = File.expand_path('../example-extract.json', __FILE__)
+      json_str = File.new(example_resource).read
+      extracted = JSON.parse(json_str)
+
+      start = Time.now.to_f
+      title = extracted['title']
+      description = extracted['description']
+      content = extracted['content']
+      @mesh_tree.word_hash
+
+      start_time = Time.now.to_f
+      title_headings = @mesh_tree.match_in_text(title)
+      description_headings = @mesh_tree.match_in_text(description)
+      content_headings = @mesh_tree.match_in_text(content)
+      classification = @classifier.classify([
+        {weight: 10.0, matches: title_headings},
+        {weight: 5.0, matches: description_headings},
+        {weight: 1.0, matches: content_headings}
+      ])
+      total_time = ((Time.now.to_f - start_time) * 1000).round
+      assert 300 > (total_time), "Total time was #{total_time}ms"
+    end
+
     def test_it_should_classify_title
       expected = {
         'H' => [1.0, {
