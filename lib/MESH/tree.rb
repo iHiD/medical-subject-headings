@@ -61,7 +61,7 @@ module MESH
       entry.split(/\W+/).each do |word|
         word.downcase!
         @by_entry_word[word] << mh
-        @entries_by_word[word] << entry
+        @entries_by_word[word] << entry.downcase
       end
     end
 
@@ -267,28 +267,27 @@ module MESH
     # end
 
 
-    def match_in_text (text)
+    def match_in_text(text)
       return [] if text.nil?
       downcased = text.downcase
       candidate_entries = Set.new
-      downcased.split(/\W+/).uniq.each do |word|
+      words = downcased.split(/\W+/).uniq
+      #ordered = words.sort.join(" ")
+      words.each do |word|
         candidate_entries.merge(find_entries_by_word(word))
       end
       matches = []
       candidate_entries.each do |entry|
-        if downcased.include? entry.downcase #This is a looser check than the regex but much, much faster
-          if /^[A-Z0-9]+$/ =~ entry
-            regex = /(^|\W)#{Regexp.quote(entry)}(\W|$)/
-          else
-            regex = /(^|\W)#{Regexp.quote(entry)}(\W|$)/i
-          end
-          heading = nil
-          text.to_enum(:scan, regex).map do |m,|
-            heading ||= find_by_entry(entry)
-            next unless heading.useful
-            match = Regexp.last_match
-            matches << {heading: heading, matched: entry, index: match.offset(0)}
-          end
+        #next unless ordered.include? entry.split.sort.join(" ") #This is a looser check than the regex but much, much faster
+        next unless downcased.include? entry #This is a looser check than the regex but much, much faster
+        regex = /(^|\W)#{Regexp.quote(entry)}(\W|$)/i
+        #regex = /#{Regexp.quote(entry)}/i
+        heading = nil
+        text.scan(regex).each do
+          heading ||= find_by_entry(entry)
+          next unless heading.useful
+          match = Regexp.last_match
+          matches << {heading: heading, matched: entry, index: match.offset(0)}
         end
       end
 
