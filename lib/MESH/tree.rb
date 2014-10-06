@@ -185,26 +185,27 @@ module MESH
     def match_in_text (text)
       return [] if text.nil?
       downcased = text.downcase
-      candidate_entries = []
+      candidate_entries = {}
       text_words = downcased.split(/\W+/)
       text_words.uniq!
       text_words.each do |word|
         entries_by_word = find_entries_by_word(word)
-        candidate_entries << entries_by_word.to_a
+        next unless entries_by_word
+        entries_by_word.to_a.each do |entry|
+          next if candidate_entries.has_key?(entry.id)
+          next unless entry.heading.useful
+          candidate_entries[entry.id] = entry
+        end
       end
-      candidate_entries.compact!
-      candidate_entries.flatten!
-      candidate_entries.uniq! #30% in this uniq
-      candidate_entries.keep_if { |entry| entry.heading.useful }
-      # puts "\n\n****\n#{candidate_entries.length}\n*****\n\n"
+
       matches = []
-      candidate_entries.each do |entry|
+      candidate_entries.each do |id, entry|
         entry_matches = entry.match_in_text(text, downcased)
         matches << entry_matches
       end
 
-      matches.compact!
       matches.flatten!
+      matches.compact!
 
       matches.combination(2) do |l, r|
         if (r[:index][0] >= l[:index][0]) && (r[:index][1] <= l[:index][1])

@@ -3,9 +3,13 @@ module MESH
   class Entry
 
     include Comparable
-    attr_accessor :heading, :term, :semantic_types, :semantic_relationship, :lexical_type, :regex, :case_sensitive,
+    attr_accessor :id, :heading, :term, :semantic_types, :semantic_relationship, :lexical_type, :regex, :case_sensitive,
                   :downcased, :locales, :loose_match_term
 
+    class << self
+      attr_accessor :last_id
+    end
+    @last_id = 0
     @@wordy_characters = ('a'..'z').to_a + ('A'..'Z').to_a + ('0'..'9').to_a
 
         def <=> other
@@ -13,6 +17,7 @@ module MESH
     end
 
     def initialize(heading, entry_text, locale)
+      @id = (Entry.last_id += 1)
       @heading = heading
       @locales = Set.new
       @locales << locale
